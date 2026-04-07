@@ -93,8 +93,8 @@ class VGG11Localizer(nn.Module):
         super(VGG11Localizer, self).__init__()
 
         self.encoder = VGG11Encoder(in_channels=in_channels)
-        for param in self.encoder.parameters():
-            param.requires_grad = False
+        # for param in self.encoder.parameters():
+        #     param.requires_grad = False
 
         self.localization_head = nn.Sequential(
             nn.Flatten(),

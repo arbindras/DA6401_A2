@@ -130,4 +130,3 @@ class VGG11Encoder(nn.Module):
             return x5_pooled, features
         else:    
              return x5_pooled
-        raise NotImplementedError("Implement VGG11Encoder.forward")

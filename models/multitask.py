@@ -170,9 +170,9 @@ class MultiTaskPerceptionModel(nn.Module):
                  classifier_path: str = "classifier.pth",
                  localizer_path: str = "localizer.pth",
                  unet_path: str = "unet.pth"):
-        gdown.download(id="1fpIHkdzmWmdMsOaFgrpgMuO_E7Pir_Il",output=classifier_path, quiet=False)
-        gdown.download(id="1McBzlxWtX_RndFIgnCZxs6FDWkP0ZXOz", output=localizer_path, quiet=False)
-        gdown.download(id="1vX0Rb6fPFkDbUmDSc-6rE7nS5JnYqEBq", output=unet_path, quiet=False)
+        gdown.download(id="1s7Rju2nm6c4lnq9YFpyWACuby00befjz",output=classifier_path, quiet=False)
+        gdown.download(id="1BTmgw6VFCx23JqGXGwYAA8540RwWUVYK", output=localizer_path, quiet=False)
+        gdown.download(id="1hR5M9aKldMGJ0pnv77WavT64gbIkGNmh", output=unet_path, quiet=False)
         super().__init__()
         self.encoder = VGG11Encoder(in_channels=in_channels)
 

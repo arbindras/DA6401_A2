@@ -99,23 +99,27 @@ class VGG11Encoder(nn.Module):
         x1 = self.enc1(x)
         features["enc1"] = x1
         x = self.pool1(x1)
+        features["enc1_pooled"] = x
 
         #Block 2
         x2 = self.enc2(x)
         features["enc2"] = x2
         x = self.pool2(x2)
+        features["enc2_pooled"] = x
 
         #Block 3
         x3_1 = self.enc3_1(x)
         x3_2 = self.enc3_2(x3_1)
         features["enc3_2"] = x3_2
         x = self.pool3(x3_2)
+        features["enc3_2_pooled"] = x
 
         #Block 4
         x4_1 = self.enc4_1(x)
         x4_2 = self.enc4_2(x4_1)
         features["enc4_2"] = x4_2
         x = self.pool4(x4_2)
+        features["enc4_2_pooled"] = x
 
         #Block 5
         x5_1 = self.enc5_1(x)

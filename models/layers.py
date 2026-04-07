@@ -29,7 +29,6 @@ class CustomDropout(nn.Module):
         Returns:
             Output tensor.
         """
-        # TODO: implement dropout.
         if not self.training or self.p == 0:
             return x
         mask = (torch.rand_like(x) > self.p).float()

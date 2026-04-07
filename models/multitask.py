@@ -371,10 +371,10 @@ class MultiTaskPerceptionModel(nn.Module):
         localizer_out = torch.stack([x_center, y_center, width, height], dim=1)
 
         # For segmentation decoder we expect certain feature keys; fallback to empty tensors if missing
-        x4 = feats.get("enc4_2") if isinstance(feats, dict) else None
-        x3 = feats.get("enc3_2") if isinstance(feats, dict) else None
-        x2 = feats.get("enc2") if isinstance(feats, dict) else None
-        x1 = feats.get("enc1") if isinstance(feats, dict) else None
+        x4 = feats.get("enc4_2_pooled") if isinstance(feats, dict) else None
+        x3 = feats.get("enc3_2_pooled") if isinstance(feats, dict) else None
+        x2 = feats.get("enc2_pooled") if isinstance(feats, dict) else None
+        x1 = feats.get("enc1_pooled") if isinstance(feats, dict) else None
 
         # If any feature is missing, try to derive shapes from bottleneck by simple upsampling
         if x4 is None:

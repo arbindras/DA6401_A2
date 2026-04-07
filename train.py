@@ -63,7 +63,7 @@ def set_seed(
 
     # 5) Enforce PyTorch deterministic algorithms when available
     try:
-        torch.use_deterministic_algorithms(True)
+        torch.use_deterministic_algorithms(True, warn_only=True)
     except Exception:
         try:
             torch.set_deterministic(True)

@@ -214,11 +214,8 @@ def _train_loop(
 # 🎯 Task-specific Trainers
 # =========================
 
-def train_classification(model, train_loader, val_loader, epochs=10, lr=1e-4):
-    optimizer = optim.AdamW([
-        {"params": model.encoder.parameters(), "lr": lr * 0.1},
-        {"params": model.classifier_head.parameters(), "lr": lr},
-    ])
+def train_classification(model, train_loader, val_loader, epochs=30, lr=1e-4):
+    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode="max")
 
     ce = nn.CrossEntropyLoss()
@@ -238,8 +235,12 @@ def train_classification(model, train_loader, val_loader, epochs=10, lr=1e-4):
     )
 
 
-def train_localization(model, train_loader, val_loader, epochs=10, lr=1e-4):
-    optimizer = optim.AdamW(model.parameters(), lr=lr)
+def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
+    # optimizer = optim.AdamW(model.parameters(), lr=lr)
+    optimizer = optim.AdamW([
+        {"params": model.encoder.parameters(),          "lr": lr * 0.5},
+        {"params": model.localization_head.parameters(), "lr": lr},
+    ], weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode="max")
 
     iou = IoULoss()
@@ -586,7 +587,7 @@ if __name__ == "__main__":
         train_loader_cls,
         val_loader_cls,
         epochs=EPOCHS,
-        lr=5e-5,
+        lr=1e-4,
     )
 
     # =========================
@@ -601,7 +602,7 @@ if __name__ == "__main__":
         train_loader_loc,
         val_loader_loc,
         epochs=EPOCHS,
-        lr=5e-5,
+        lr=1e-4,
     )
 
     # =========================

@@ -223,8 +223,8 @@ class MultiTaskPerceptionModel(nn.Module):
         # -------------------------
         # 📥 Download weights
         # -------------------------
-        gdown.download(id="1vhTXChEy87TuHQLZabJqyeXpyJO83pNu", output=classifier_path, quiet=False)
-        gdown.download(id="1qeD3lAkZjy-ata7Yy6Ld3KVRJLMlRNlU", output=localizer_path, quiet=False)
+        gdown.download(id="1JCg2CNXKXc63YLHP3OsFoUg9I_bwXsqI", output=classifier_path, quiet=False)
+        gdown.download(id="1E_8FcKhZSu_HlQ-wB28iE1U3J7aVLhMw", output=localizer_path, quiet=False)
         gdown.download(id="1hR5M9aKldMGJ0pnv77WavT64gbIkGNmh", output=unet_path, quiet=False)
 
         # -------------------------

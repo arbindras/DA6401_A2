@@ -1,4 +1,5 @@
-# import torch
+import torch
+import pandas as pd
 # import torch.nn as nn
 import torch.nn.functional as F
 # import gdown
@@ -317,9 +318,9 @@ class MultiTaskPerceptionModel(nn.Module):
     ):
         
         super().__init__()
-        gdown.download(id="16tUmqJFbl7KP7Q5bJT5Q63VE8npGDRCs", output=classifier_path, quiet=False)
-        gdown.download(id="1Q_z2t5FAtXt3iMlBseNU0RCcyz4_WH6B", output=localizer_path, quiet=False)
-        gdown.download(id="1jNqBquHJwCtnVMnfmR70kJ3uO-iitEV9", output=unet_path, quiet=False)
+        gdown.download(id="1_mZoG5eo3AjVKI41IR7QM_9iZI9iB1AO", output=classifier_path, quiet=False)
+        gdown.download(id="1Py3mqk-Vp4k9YnWwKGp6E76fZn_DpNRo", output=localizer_path, quiet=False)
+        gdown.download(id="1HTqy0T-DFUpeRIBjNZxfQvhPXrbc169n", output=unet_path, quiet=False)
 
         # Shared encoder
         self.encoder = VGG11Encoder(in_channels=in_channels)
@@ -366,12 +367,26 @@ class MultiTaskPerceptionModel(nn.Module):
     def forward(self, x):
         # One shared encoder pass — get bottleneck + skip features
         bottleneck, feats = self.encoder(x, return_features=True)
+
+        bottleneck = F.interpolate(
+        bottleneck,
+        scale_factor=2,
+        mode="bilinear",
+        align_corners=False
+        )
         
         # Classification
         cls_out = self.classifier_head(bottleneck)
         
         # Localization
-        loc_out = self.localization_head(bottleneck)
+        B, _, H, W = x.shape
+        loc = self.localization_head(bottleneck)
+        cx = loc[:, 0] * W
+        cy = loc[:, 1] * H
+        w  = loc[:, 2] * W
+        h  = loc[:, 3] * H
+
+        loc_out = torch.stack([cx, cy, w, h], dim=1)
         
         # Segmentation decoder
         d4 = self.up4(bottleneck)

@@ -248,7 +248,7 @@ def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
 
     # FIX 1: accept all 3 targets, use only boxes
     def loss_fn(out, labels, boxes, masks):
-        boxes_norm = boxes.float()/224.0
+        boxes_norm = boxes.float()
         return 0.5 * iou(out, boxes_norm) + 0.5 * l1(out, boxes_norm)
 
     def metric_fn(m, loader):

@@ -4,8 +4,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .layers import CustomDropout
-from .vgg11 import VGG11Encoder, ConvBlock
+from models.layers import CustomDropout
+from models.vgg11 import VGG11Encoder, ConvBlock
 
 class VGG11UNet(nn.Module):
     """U-Net style segmentation network.
@@ -93,26 +93,24 @@ class VGG11UNet(nn.Module):
         x5_2 = self.enc5_2(x5_1)
 
         ###### Decoder #########
-        d4 = self.up4(x5_2)
+        d4 = self.up4(x5_2)         
         d4 = torch.cat([d4, x4_2], dim=1)
         d4 = self.dec4(d4)
 
-        d3 = self.up3(d4)
+        d3 = self.up3(d4)      
         d3 = torch.cat([d3, x3_2], dim=1)
         d3 = self.dec3(d3)
 
-        d2 = self.up2(d3)
+        d2 = self.up2(d3)   
         d2 = torch.cat([d2, x2], dim=1)
         d2 = self.dec2(d2)
 
-        d1 = self.up1(d2)
+        d1 = self.up1(d2)           
         d1 = torch.cat([d1, x1], dim=1)
         d1 = self.dec1(d1)
 
-        out = self.dropout(d1)
-        out = self.seg_head(out)
-
-        out = F.interpolate(out, size=x.shape[2:], mode='bilinear', align_corners=False)
+        out = self.dropout(d1)  
+        out = self.seg_head(out)    
 
         return out
     

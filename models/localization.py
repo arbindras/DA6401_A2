@@ -75,8 +75,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .layers import CustomDropout
-from .vgg11 import VGG11Encoder
+from models.layers import CustomDropout
+from models.vgg11 import VGG11Encoder
 
 class VGG11Localizer(nn.Module):
     """VGG11-based localizer."""

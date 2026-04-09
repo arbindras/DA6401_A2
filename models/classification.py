@@ -4,8 +4,8 @@
 import torch
 import torch.nn as nn
 
-from .layers import CustomDropout
-from .vgg11 import VGG11Encoder
+from models.layers import CustomDropout
+from models.vgg11 import VGG11Encoder
 import torch.nn.functional as F
 
 class VGG11Classifier(nn.Module):

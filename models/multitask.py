@@ -363,32 +363,72 @@ class MultiTaskPerceptionModel(nn.Module):
         self.seg_head = nn.Conv2d(64, seg_classes, kernel_size=1)
         self.dropout  = CustomDropout(0.5)
 
+        # Load weights from downloaded checkpoints
+        self._load_weights(classifier_path, localizer_path, unet_path)
+
+    # ------------------------------------------------------------------
+    def _load_weights(self, cls_path, loc_path, unet_path):
+        def _sd(path):
+            try:
+                sd = torch.load(path, map_location="cpu")
+                return sd["model_state"] if isinstance(sd, dict) and "model_state" in sd else sd
+            except Exception as e:
+                print(f"⚠️  Could not read {path}: {e}"); return None
+
+        # Classifier checkpoint → encoder + classifier_head
+        cls_sd = _sd(cls_path)
+        if cls_sd:
+            enc_sd  = {k[len("encoder."):]: v  for k, v in cls_sd.items() if k.startswith("encoder.")}
+            head_sd = {k[len("classifier_head."):]: v for k, v in cls_sd.items() if k.startswith("classifier_head.")}
+            self.encoder.load_state_dict(enc_sd, strict=False)
+            self.classifier_head.load_state_dict(head_sd, strict=False)
+            print("✅ Classifier weights loaded")
+
+        # Localizer checkpoint → localization_head (and optionally encoder)
+        loc_sd = _sd(loc_path)
+        if loc_sd:
+            head_sd = {k[len("localization_head."):]: v for k, v in loc_sd.items() if k.startswith("localization_head.")}
+            if head_sd:
+                self.localization_head.load_state_dict(head_sd, strict=False)
+                print("✅ Localizer head weights loaded")
+            else:
+                # checkpoint might be a bare head state dict
+                self.localization_head.load_state_dict(loc_sd, strict=False)
+                print("✅ Localizer weights loaded (bare)")
+
+        # UNet checkpoint → decoder layers
+        unet_sd = _sd(unet_path)
+        if unet_sd:
+            dec_prefixes = ("up4.", "dec4.", "up3.", "dec3.", "up2.", "dec2.", "up1.", "dec1.", "seg_head.", "dropout.")
+            dec_sd = {k: v for k, v in unet_sd.items() if any(k.startswith(p) for p in dec_prefixes)}
+            self.load_state_dict(dec_sd, strict=False)
+            print("✅ UNet decoder weights loaded")
+
+    # ------------------------------------------------------------------
     def forward(self, x):
-        # One shared encoder pass — get bottleneck + skip features
+        B, _, H, W = x.shape
+
+        # Single encoder pass; bottleneck is [B,512,7,7] (after pool5)
         bottleneck, feats = self.encoder(x, return_features=True)
 
-        bottleneck = F.interpolate(
-        bottleneck,
-        scale_factor=2,
-        mode="bilinear",
-        align_corners=False
-        )
-        
-        # Classification
-        cls_out = self.classifier_head(bottleneck)
-        
-        # Localization
-        B, _, H, W = x.shape
-        loc = self.localization_head(bottleneck)
-        cx = loc[:, 0] * W
-        cy = loc[:, 1] * H
-        w  = loc[:, 2] * W
-        h  = loc[:, 3] * H
+        # Use enc5_2 (pre-pool5, 14×14) as the seg decoder bottleneck
+        # so skip sizes align:  up4→28==enc4_2, up3→56==enc3_2, etc.
+        seg_bottleneck = feats["enc5_2"]          # [B, 512, 14, 14]
 
-        loc_out = torch.stack([cx, cy, w, h], dim=1)
-        
-        # Segmentation decoder
-        d4 = self.up4(bottleneck)
+        # ---- Classification ----
+        cls_out = self.classifier_head(bottleneck)   # AdaptiveAvgPool inside
+
+        # ---- Localization (output normalized → pixel space) ----
+        loc = self.localization_head(bottleneck)      # [B,4] in [0,1], Sigmoid inside
+        loc_out = torch.stack([
+            loc[:, 0] * W,
+            loc[:, 1] * H,
+            loc[:, 2] * W,
+            loc[:, 3] * H,
+        ], dim=1)                                     # [B,4] pixel cx,cy,w,h
+
+        # ---- Segmentation ----
+        d4 = self.up4(seg_bottleneck)
         d4 = torch.cat([d4, feats["enc4_2"]], dim=1)
         d4 = self.dec4(d4)
         d3 = self.up3(d4)
@@ -401,9 +441,8 @@ class MultiTaskPerceptionModel(nn.Module):
         d1 = torch.cat([d1, feats["enc1"]], dim=1)
         d1 = self.dec1(d1)
         seg_out = self.seg_head(self.dropout(d1))
-        seg_out = F.interpolate(seg_out, size=x.shape[2:],
-                                mode='bilinear', align_corners=False)
-        
+        seg_out = F.interpolate(seg_out, size=(H, W), mode='bilinear', align_corners=False)
+
         return {
             "classification": cls_out,
             "localization":   loc_out,

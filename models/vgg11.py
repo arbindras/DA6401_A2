@@ -124,6 +124,7 @@ class VGG11Encoder(nn.Module):
         #Block 5
         x5_1 = self.enc5_1(x)
         x5_2 = self.enc5_2(x5_1)
+        features["enc5_2"] = x5_2         
         x5_pooled = self.pool5(x5_2)
 
         if return_features:

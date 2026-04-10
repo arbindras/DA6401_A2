@@ -317,9 +317,9 @@ class MultiTaskPerceptionModel(nn.Module):
     ):
         
         super().__init__()
-        gdown.download(id="1_mZoG5eo3AjVKI41IR7QM_9iZI9iB1AO", output=classifier_path, quiet=False)
-        gdown.download(id="1Py3mqk-Vp4k9YnWwKGp6E76fZn_DpNRo", output=localizer_path, quiet=False)
-        gdown.download(id="1HTqy0T-DFUpeRIBjNZxfQvhPXrbc169n", output=unet_path, quiet=False)
+        gdown.download(id="10o3Siki2yCk_prv4QQHKXi11j3g_JAes", output=classifier_path, quiet=False)
+        gdown.download(id="14BcmfRXOrGqbH55PT5mvmMCjJX2ONUev", output=localizer_path, quiet=False)
+        gdown.download(id="1ojQJxHBvqRsS0OGDOyR3JuJpPqgpazXT", output=unet_path, quiet=False)
 
         # Shared encoder
         self.encoder = VGG11Encoder(in_channels=in_channels)

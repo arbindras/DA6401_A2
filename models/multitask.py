@@ -322,7 +322,7 @@ class MultiTaskPerceptionModel(nn.Module):
         # Download weights
         gdown.download(id="1R_UMGJ82-myRodJZdV4FJSJy3JmJowpF", output=classifier_path, quiet=False)
         gdown.download(id="18EuKWuB4EA9V_FCbvhvBOQVRs_XWcPju", output=localizer_path, quiet=False)
-        gdown.download(id="1tomO-r-fEasJcYclO37r4aZy6T9DY_ap", output=unet_path, quiet=False)
+        gdown.download(id="14t-6HQkNiTdWyj8MD3D7knTPazRCiNfo", output=unet_path, quiet=False)
 
         # ✅ Use pretrained architectures
         from models.classification import VGG11Classifier

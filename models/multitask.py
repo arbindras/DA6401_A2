@@ -361,13 +361,14 @@ class MultiTaskPerceptionModel(nn.Module):
         # Classification
         cls_out = self.classifier(x)
         # Localization
-         # convert normalized → pixel coordinates
-        # loc = self.localizer(x)  # normalized [0,1]
-
-        #  cx = loc[:, 0] * W
-        #  cy = loc[:, 1] * H
-        #  w  = loc[:, 2] * W
-        #  h  = loc[:, 3] * H
+        # convert normalized → pixel coordinates
+        loc = self.localizer(x)  # normalized [0,1]
+        loc_out = torch.stack([
+            loc[:, 0] * W,  # cx
+            loc[:, 1] * H,  # cy
+            loc[:, 2] * W,  # w
+            loc[:, 3] * H,  # h
+        ], dim=1)
         loc_out = self.localizer(x)
 
         # Segmentation

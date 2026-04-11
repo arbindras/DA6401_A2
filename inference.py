@@ -433,20 +433,35 @@ def evaluate_classification(model: nn.Module, dataloader: torch.utils.data.DataL
     return float(f1_score(all_labels, all_preds, average="macro", zero_division=0))
 
 
-def evaluate_localization(model: nn.Module, dataloader: torch.utils.data.DataLoader) -> float:
-    """Evaluate mean IoU for localization."""
+# def evaluate_localization(model: nn.Module, dataloader: torch.utils.data.DataLoader) -> float:
+#     """Evaluate mean IoU for localization."""
+#     model.eval()
+#     ious = []
+#     dev = next(model.parameters()).device
+
+#     with torch.no_grad():
+#         # FIX 2: unpack all 4 fields; labels/masks ignored here
+#         for images, labels, target_boxes, masks in dataloader:
+#             images = images.to(dev)
+#             preds_np  = predict_localization(model, images)   # [B, 4]
+#             target_np = _to_numpy(target_boxes)
+#             ious.append(compute_iou(preds_np, target_np))
+
+#     return float(np.mean(ious)) if ious else 0.0
+def evaluate_localization(model, dataloader):
     model.eval()
     ious = []
     dev = next(model.parameters()).device
-
     with torch.no_grad():
-        # FIX 2: unpack all 4 fields; labels/masks ignored here
         for images, labels, target_boxes, masks in dataloader:
             images = images.to(dev)
-            preds_np  = predict_localization(model, images)   # [B, 4]
-            target_np = _to_numpy(target_boxes)
-            ious.append(compute_iou(preds_np, target_np))
-
+            H, W   = images.shape[2], images.shape[3]
+            preds  = predict_localization(model, images)   # pixel space
+            # normalize preds back for compute_iou which works in [0,1]
+            scale  = np.array([W, H, W, H], dtype=np.float32)
+            preds_norm  = preds / scale
+            target_norm = _to_numpy(target_boxes)          # already normalized
+            ious.append(compute_iou(preds_norm, target_norm))
     return float(np.mean(ious)) if ious else 0.0
 
 

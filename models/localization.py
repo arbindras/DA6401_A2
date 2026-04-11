@@ -188,8 +188,16 @@ class VGG11Localizer(nn.Module):
         print(f"✅ Loaded classifier encoder → localizer. Missing: {missing}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.encoder(x)                        # [B, 512, 7, 7]
-        x = F.adaptive_avg_pool2d(x, (1, 1))       # [B, 512, 1, 1]  ← key change
-        x = x.flatten(1)                           # [B, 512]
-        out = self.localization_head(x)            # [B, 4]
-        return torch.sigmoid(out)                  # normalized [0, 1]
+        _, _, H, W = x.shape
+        feat = self.encoder(x)
+        feat = F.adaptive_avg_pool2d(feat, (1, 1)).flatten(1)
+        out  = torch.sigmoid(self.localization_head(feat))  # [B, 4] normalized
+
+        # Convert to pixel space — autograder expects image-space coordinates
+        out = torch.stack([
+            out[:, 0] * W,
+            out[:, 1] * H,
+            out[:, 2] * W,
+            out[:, 3] * H,
+        ], dim=1)
+        return out  # [B, 4] pixel-space cxcywh

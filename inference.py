@@ -267,7 +267,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from typing import Dict
-
+from sklearn.metrics import f1_score as sk_f1
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -404,24 +404,33 @@ def dice_score(pred_masks: np.ndarray, target_masks: np.ndarray, eps: float = 1e
 # =========================
 # 📊 Evaluate functions
 # =========================
+from sklearn.metrics import f1_score
 def evaluate_classification(model: nn.Module, dataloader: torch.utils.data.DataLoader) -> float:
     """Evaluate classification accuracy."""
     model.eval()
-    correct = 0
-    total   = 0
+    # correct = 0
+    # total   = 0
+    # dev = next(model.parameters()).device
+
+    # with torch.no_grad():
+    #     # FIX 1: unpack all 4 fields; boxes/masks ignored here
+    #     for images, labels, boxes, masks in dataloader:
+    #         images = images.to(dev)
+    #         labels = labels.to(dev)
+    #         logits = model(images)
+    #         preds  = torch.argmax(logits, dim=1)
+    #         correct += (preds == labels).sum().item()
+    #         total   += labels.size(0)
+
+    # return correct / total if total > 0 else 0.0
+    all_preds, all_labels = [], []
     dev = next(model.parameters()).device
-
     with torch.no_grad():
-        # FIX 1: unpack all 4 fields; boxes/masks ignored here
         for images, labels, boxes, masks in dataloader:
-            images = images.to(dev)
-            labels = labels.to(dev)
-            logits = model(images)
-            preds  = torch.argmax(logits, dim=1)
-            correct += (preds == labels).sum().item()
-            total   += labels.size(0)
-
-    return correct / total if total > 0 else 0.0
+            preds = model(images.to(dev)).argmax(dim=1).cpu().numpy()
+            all_preds.extend(preds)
+            all_labels.extend(labels.numpy())
+    return float(f1_score(all_labels, all_preds, average="macro", zero_division=0))
 
 
 def evaluate_localization(model: nn.Module, dataloader: torch.utils.data.DataLoader) -> float:

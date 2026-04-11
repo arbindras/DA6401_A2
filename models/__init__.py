@@ -9,7 +9,7 @@ from models.layers import CustomDropout
 from models.localization import VGG11Localizer
 from models.classification import VGG11Classifier
 from models.segmentation import VGG11UNet
-from models.vgg11encoder import VGG11Encoder
+from models.vgg11 import VGG11Encoder
 from models.multitask import MultiTaskPerceptionModel
 
 __all__ = [

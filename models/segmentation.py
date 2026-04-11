@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.layers import CustomDropout
-from models.vgg11encoder import VGG11Encoder, ConvBlock
+from models.vgg11 import VGG11Encoder, ConvBlock
 
 class VGG11UNet(nn.Module):
     """U-Net style segmentation network.
@@ -65,6 +65,18 @@ class VGG11UNet(nn.Module):
         self.dropout = CustomDropout(dropout_p)
         self.seg_head = nn.Conv2d(64, num_classes, kernel_size=1)
 
+    def load_from_classifier(self, classifier_path: str):
+        """Bootstrap encoder from trained VGG11Classifier weights."""
+        sd = torch.load(classifier_path, map_location="cpu")
+        if isinstance(sd, dict) and "model_state" in sd:
+            sd = sd["model_state"]
+        # Map classifier encoder keys to UNet encoder keys (same layer names)
+        enc_sd = {k.replace("encoder.", ""): v
+                for k, v in sd.items() if k.startswith("encoder.")}
+        # UNet has its own enc* blocks directly (not wrapped in self.encoder)
+        missing, unexpected = self.load_state_dict(enc_sd, strict=False)
+        print(f"✅ UNet encoder bootstrapped from classifier. Missing: {len(missing)}")
+    
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass for segmentation model.

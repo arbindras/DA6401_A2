@@ -216,9 +216,11 @@ def _train_loop(
 
 def train_classification(model, train_loader, val_loader, epochs=30, lr=1e-4):
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = ReduceLROnPlateau(optimizer, mode="max")
-
-    ce = nn.CrossEntropyLoss()
+     # Cosine annealing beats ReduceLROnPlateau for classification
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+    
+    # Label smoothing helps with 37-class fine-grained classification
+    ce = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     # FIX 1 & 3: accept all 3 targets, use only labels, cast to long
     def loss_fn(out, labels, boxes, masks):
@@ -235,18 +237,45 @@ def train_classification(model, train_loader, val_loader, epochs=30, lr=1e-4):
     )
 
 
+# def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
+#     # optimizer = optim.AdamW(model.parameters(), lr=lr)
+#     optimizer = optim.AdamW([
+#         {"params": model.encoder.parameters(),          "lr": lr * 0.5},
+#         {"params": model.localization_head.parameters(), "lr": lr},
+#     ], weight_decay=1e-4)
+#     scheduler = ReduceLROnPlateau(optimizer, mode="max")
+
+#     iou = IoULoss()
+#     l1  = nn.SmoothL1Loss()
+
+#     # FIX 1: accept all 3 targets, use only boxes
+#     def loss_fn(out, labels, boxes, masks):
+#         boxes_norm = boxes.float()
+#         return 0.5 * iou(out, boxes_norm) + 0.5 * l1(out, boxes_norm)
+
+#     def metric_fn(m, loader):
+#         return evaluate_localization(m, loader)
+
+#     return _train_loop(
+#         model, train_loader, val_loader, loss_fn,
+#         metric_fn, epochs, optimizer, scheduler,
+#         checkpoint_path="localizer.pth",
+#         maximize_metric=True,
+#     )
 def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
-    # optimizer = optim.AdamW(model.parameters(), lr=lr)
-    optimizer = optim.AdamW([
-        {"params": model.encoder.parameters(),          "lr": lr * 0.5},
-        {"params": model.localization_head.parameters(), "lr": lr},
-    ], weight_decay=1e-4)
-    scheduler = ReduceLROnPlateau(optimizer, mode="max")
+    # Phase 1: freeze encoder, train head only (fast convergence)
+    for p in model.encoder.parameters():
+        p.requires_grad = False
+
+    optimizer = optim.AdamW(
+        filter(lambda p: p.requires_grad, model.parameters()),
+        lr=lr, weight_decay=1e-4
+    )
+    scheduler = ReduceLROnPlateau(optimizer, mode="max", patience=3)
 
     iou = IoULoss()
     l1  = nn.SmoothL1Loss()
 
-    # FIX 1: accept all 3 targets, use only boxes
     def loss_fn(out, labels, boxes, masks):
         boxes_norm = boxes.float()
         return 0.5 * iou(out, boxes_norm) + 0.5 * l1(out, boxes_norm)
@@ -254,11 +283,27 @@ def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
     def metric_fn(m, loader):
         return evaluate_localization(m, loader)
 
+    warmup_epochs = min(5, epochs // 4)
+    _train_loop(
+        model, train_loader, val_loader, loss_fn,
+        metric_fn, warmup_epochs, optimizer, scheduler,
+        checkpoint_path="localizer.pth", maximize_metric=True,
+    )
+
+    # Phase 2: unfreeze encoder with lower LR
+    for p in model.encoder.parameters():
+        p.requires_grad = True
+
+    optimizer = optim.AdamW([
+        {"params": model.encoder.parameters(),           "lr": lr * 0.1},
+        {"params": model.localization_head.parameters(), "lr": lr},
+    ], weight_decay=1e-4)
+    scheduler = ReduceLROnPlateau(optimizer, mode="max", patience=3)
+
     return _train_loop(
         model, train_loader, val_loader, loss_fn,
-        metric_fn, epochs, optimizer, scheduler,
-        checkpoint_path="localizer.pth",
-        maximize_metric=True,
+        metric_fn, epochs - warmup_epochs, optimizer, scheduler,
+        checkpoint_path="localizer.pth", maximize_metric=True,
     )
 
 
@@ -506,12 +551,13 @@ if __name__ == "__main__":
     ])
 
     train_image_transform = transforms.Compose([
-    transforms.Resize((IMG_SIZE, IMG_SIZE)),
-    transforms.RandomHorizontalFlip(),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
+        transforms.RandomResizedCrop(224, scale=(0.7, 1.0)),   # key for fine-grained
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.05),
+        transforms.RandomGrayscale(p=0.05),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
     ])
 
     # FIX 1: interpolation belongs inside Resize, not in Compose
@@ -596,6 +642,8 @@ if __name__ == "__main__":
     print("\n🚀 Training Localizer...\n")
 
     localizer = VGG11Localizer()
+
+    localizer.load_from_classifier("classifier.pth")
 
     train_localization(
         localizer,

@@ -1,33 +1,90 @@
 """Classification components
 """
 
+# import torch
+# import torch.nn as nn
+
+# from models.layers import CustomDropout
+# from models.vgg11 import VGG11Encoder
+# import torch.nn.functional as F
+
+# class VGG11Classifier(nn.Module):
+#     """Full classifier = VGG11Encoder + ClassificationHead."""
+
+#     def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5):
+#         """
+#         Initialize the VGG11Classifier model.
+#         Args:
+#             num_classes: Number of output classes.
+#             in_channels: Number of input channels.
+#             dropout_p: Dropout probability for the classifier head.
+#         """
+#         super(VGG11Classifier, self).__init__()
+
+#         self.encoder = VGG11Encoder(in_channels=in_channels)
+
+#         self.classifier_head = nn.Sequential(
+#             nn.AdaptiveAvgPool2d((1, 1)),  # Global average pooling
+#             nn.Flatten(),
+
+#             nn.Linear(512*1*1, 4096),
+#             nn.BatchNorm1d(4096),
+#             nn.ReLU(inplace=True),
+#             CustomDropout(dropout_p),
+
+#             nn.Linear(4096, 4096),
+#             nn.BatchNorm1d(4096),
+#             nn.ReLU(inplace=True),
+#             CustomDropout(dropout_p),
+
+#             nn.Linear(4096, num_classes)  # Final classification layer
+#         )
+
+#     def forward(self, x: torch.Tensor) -> torch.Tensor:
+#         """Forward pass for classification model.
+#         Args:
+#             x: Input tensor of shape [B, in_channels, H, W].
+#         Returns:
+#             Classification logits [B, num_classes].
+#         """
+#         x = self.encoder(x) # [B, 512, H/16, W/16]
+#         if x.shape[-1] != 7 or x.shape[-2] != 7:
+#             x = F.adaptive_avg_pool2d(x, (7, 7))  # Ensure the spatial dimensions are 7x7
+#         x = self.classifier_head(x) # [B, num_classes]
+#         return x
+        
+
+# x = torch.randn(2, 3, 224, 224)
+# model = VGG11Classifier()
+# out = model(x)
+
+# print(out.shape)  # EXPECT: [2, 37]
+
+
+"""Classification components"""
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from models.layers import CustomDropout
-from models.vgg11encoder import VGG11Encoder
-import torch.nn.functional as F
+from models.vgg11 import VGG11Encoder
+
 
 class VGG11Classifier(nn.Module):
     """Full classifier = VGG11Encoder + ClassificationHead."""
 
-    def __init__(self, num_classes: int = 37, in_channels: int = 3, dropout_p: float = 0.5):
-        """
-        Initialize the VGG11Classifier model.
-        Args:
-            num_classes: Number of output classes.
-            in_channels: Number of input channels.
-            dropout_p: Dropout probability for the classifier head.
-        """
-        super(VGG11Classifier, self).__init__()
+    def __init__(self, num_classes: int = 37, in_channels: int = 3,
+                 dropout_p: float = 0.5):
+        super().__init__()
 
         self.encoder = VGG11Encoder(in_channels=in_channels)
 
         self.classifier_head = nn.Sequential(
-            nn.AdaptiveAvgPool2d((1, 1)),  # Global average pooling
+            nn.AdaptiveAvgPool2d((1, 1)),
             nn.Flatten(),
 
-            nn.Linear(512*1*1, 4096),
+            nn.Linear(512, 4096),
             nn.BatchNorm1d(4096),
             nn.ReLU(inplace=True),
             CustomDropout(dropout_p),
@@ -37,25 +94,9 @@ class VGG11Classifier(nn.Module):
             nn.ReLU(inplace=True),
             CustomDropout(dropout_p),
 
-            nn.Linear(4096, num_classes)  # Final classification layer
+            nn.Linear(4096, num_classes),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass for classification model.
-        Args:
-            x: Input tensor of shape [B, in_channels, H, W].
-        Returns:
-            Classification logits [B, num_classes].
-        """
-        x = self.encoder(x) # [B, 512, H/16, W/16]
-        if x.shape[-1] != 7 or x.shape[-2] != 7:
-            x = F.adaptive_avg_pool2d(x, (7, 7))  # Ensure the spatial dimensions are 7x7
-        x = self.classifier_head(x) # [B, num_classes]
-        return x
-        
-
-# x = torch.randn(2, 3, 224, 224)
-# model = VGG11Classifier()
-# out = model(x)
-
-# print(out.shape)  # EXPECT: [2, 37]
+        x = self.encoder(x)
+        return self.classifier_head(x)

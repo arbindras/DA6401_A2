@@ -63,8 +63,6 @@ class OxfordIIITPetDataset(Dataset):
                 )
             self.samples = train_samples if self.split == "train" else val_samples
 
-            np.save("train_idx.npy", train_samples)
-            np.save("val_idx.npy", val_samples)
         
     def __len__(self):
         return len(self.samples)

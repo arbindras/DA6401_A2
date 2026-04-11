@@ -6,18 +6,6 @@ from typing import Dict, Tuple, Union
 import torch
 import torch.nn as nn
 
-# class ConvBlock(nn.Module):
-#     def __init__(self, in_ch, out_ch):
-#         super().__init__()
-#         self.block = nn.Sequential(
-#             nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1),
-#             nn.BatchNorm2d(out_ch),
-#             nn.ReLU(inplace=True)
-#         )
-
-#     def forward(self, x):
-#         return self.block(x)
-
 class ConvBlock(nn.Module):
     """
     Basic convolutional block:
@@ -78,6 +66,7 @@ class VGG11Encoder(nn.Module):
         self.enc5_1 = ConvBlock(512, 512)
         self.enc5_2 = ConvBlock(512, 512)
         self.pool5 = nn.MaxPool2d(2, 2)
+    
 
     def forward(
         self, x: torch.Tensor, return_features: bool = False

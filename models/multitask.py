@@ -200,7 +200,7 @@ import gdown
 from models.classification import VGG11Classifier
 from models.localization import VGG11Localizer
 from models.segmentation import VGG11UNet
-from models.vgg11encoder import VGG11Encoder, ConvBlock
+from models.vgg11 import VGG11Encoder, ConvBlock
 
 # class MultiTaskPerceptionModel(nn.Module):
 #     """
@@ -320,9 +320,9 @@ class MultiTaskPerceptionModel(nn.Module):
         import gdown
 
         # Download weights
-        gdown.download(id="1R_UMGJ82-myRodJZdV4FJSJy3JmJowpF", output=classifier_path, quiet=False)
-        gdown.download(id="18EuKWuB4EA9V_FCbvhvBOQVRs_XWcPju", output=localizer_path, quiet=False)
-        gdown.download(id="14t-6HQkNiTdWyj8MD3D7knTPazRCiNfo", output=unet_path, quiet=False)
+        gdown.download(id="13z1NsZKBuSolE6RmP7co98X2EuZrD0bj", output=classifier_path, quiet=False)
+        gdown.download(id="1jrnbDJR7JAzaIsbG12xOUMTghyhkbM07", output=localizer_path, quiet=False)
+        gdown.download(id="1Drx5BLnmxDjSPuB7n1fmddPy6dQi7nIu", output=unet_path, quiet=False)
 
         # ✅ Use pretrained architectures
         from models.classification import VGG11Classifier
@@ -339,37 +339,35 @@ class MultiTaskPerceptionModel(nn.Module):
         self._load(self.segmenter,  unet_path,       "unet")
 
         # ✅ Set to evaluation mode (CRITICAL)
-        self.classifier.eval()
-        self.localizer.eval()
-        self.segmenter.eval()
+        # self.classifier.eval()
+        # self.localizer.eval()
+        # self.segmenter.eval()
 
     def _load(self, model, path, name):
-        sd = torch.load(path, map_location="cpu")
-
+        sd = torch.load(path, map_location="cpu", weights_only=True)
         if isinstance(sd, dict) and "model_state" in sd:
             sd = sd["model_state"]
-
         try:
             model.load_state_dict(sd, strict=True)
-            print(f"✅ Loaded {name} weights")
-        except:
+            print(f"✅ Loaded {name} weights (strict)")
+        except RuntimeError as e:
             model.load_state_dict(sd, strict=False)
-            print(f"⚠️ Partial load for {name}")
+            print(f"⚠️  Partial load for {name}: {e}")
+
 
     def forward(self, x):
         B, _, H, W = x.shape
 
         # Classification
         cls_out = self.classifier(x)
+        # Localization
+         # convert normalized → pixel coordinates
+        # loc = self.localizer(x)  # normalized [0,1]
 
-        # Localization → convert to pixel coords
-        # loc = self.localizer(x)
-        # loc_out = torch.stack([
-        #     loc[:, 0] * W,
-        #     loc[:, 1] * H,
-        #     loc[:, 2] * W,
-        #     loc[:, 3] * H,
-        # ], dim=1)
+        #  cx = loc[:, 0] * W
+        #  cy = loc[:, 1] * H
+        #  w  = loc[:, 2] * W
+        #  h  = loc[:, 3] * H
         loc_out = self.localizer(x)
 
         # Segmentation

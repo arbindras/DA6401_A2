@@ -320,9 +320,9 @@ class MultiTaskPerceptionModel(nn.Module):
         import gdown
 
         # Download weights
-        gdown.download(id="1CJuyIeDH-f6qgRvVxZwopAvufkkW9SJf", output=classifier_path, quiet=False)
-        gdown.download(id="1keBVMRWkJoYKs7weEbMuxEJ1Em17bHcK", output=localizer_path, quiet=False)
-        gdown.download(id="1kqv4G7Nte8XnVBG4tZ_hHwCITaKBaczH", output=unet_path, quiet=False)
+        gdown.download(id="1R_UMGJ82-myRodJZdV4FJSJy3JmJowpF", output=classifier_path, quiet=False)
+        gdown.download(id="18EuKWuB4EA9V_FCbvhvBOQVRs_XWcPju", output=localizer_path, quiet=False)
+        gdown.download(id="14t-6HQkNiTdWyj8MD3D7knTPazRCiNfo", output=unet_path, quiet=False)
 
         # ✅ Use pretrained architectures
         from models.classification import VGG11Classifier
@@ -359,35 +359,18 @@ class MultiTaskPerceptionModel(nn.Module):
     def forward(self, x):
         B, _, H, W = x.shape
 
-        mean = torch.tensor([0.485, 0.456, 0.406], device=x.device).view(1,3,1,1)
-        std  = torch.tensor([0.229, 0.224, 0.225], device=x.device).view(1,3,1,1)
-        x = (x - mean) / std
-
-
         # Classification
         cls_out = self.classifier(x)
 
         # Localization → convert to pixel coords
-        loc = self.localizer(x)
+        # loc = self.localizer(x)
         # loc_out = torch.stack([
         #     loc[:, 0] * W,
         #     loc[:, 1] * H,
         #     loc[:, 2] * W,
         #     loc[:, 3] * H,
         # ], dim=1)
-        # loc_out = self.localizer(x)
-
-        x1 = loc[:, 0]
-        y1 = loc[:, 1]
-        x2 = loc[:, 2]
-        y2 = loc[:, 3]
-
-        cx = (x1 + x2) / 2
-        cy = (y1 + y2) / 2
-        w  = (x2 - x1)
-        h  = (y2 - y1)
-
-        loc_out = torch.stack([cx, cy, w, h], dim=1)
+        loc_out = self.localizer(x)
 
         # Segmentation
         seg_out = self.segmenter(x)

@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from models.layers import CustomDropout
-from models.vgg11 import VGG11Encoder
+from models.vgg11encoder import VGG11Encoder
 import torch.nn.functional as F
 
 class VGG11Classifier(nn.Module):

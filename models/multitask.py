@@ -200,7 +200,7 @@ import gdown
 from models.classification import VGG11Classifier
 from models.localization import VGG11Localizer
 from models.segmentation import VGG11UNet
-from models.vgg11 import VGG11Encoder, ConvBlock
+from models.vgg11encoder import VGG11Encoder, ConvBlock
 
 # class MultiTaskPerceptionModel(nn.Module):
 #     """

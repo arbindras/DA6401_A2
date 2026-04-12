@@ -215,10 +215,9 @@ def _train_loop(
 # =========================
 
 def train_classification(model, train_loader, val_loader, epochs=30, lr=1e-4):
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = optim.AdamW(model.parameters(), lr=lr)
      # Cosine annealing beats ReduceLROnPlateau for classification
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-    
+    scheduler = ReduceLROnPlateau(optimizer, mode="max")    
     # Label smoothing helps with 37-class fine-grained classification
     ce = nn.CrossEntropyLoss(label_smoothing=0.1)
 
@@ -263,49 +262,43 @@ def train_classification(model, train_loader, val_loader, epochs=30, lr=1e-4):
 #         maximize_metric=True,
 #     )
 def train_localization(model, train_loader, val_loader, epochs=30, lr=1e-4):
-    # Phase 1: freeze encoder, train head only (fast convergence)
     for p in model.encoder.parameters():
         p.requires_grad = False
 
     optimizer = optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=lr, weight_decay=1e-4
-    )
+        lr=lr, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode="max", patience=3)
 
-    iou = IoULoss()
-    l1  = nn.SmoothL1Loss()
+    iou_loss_fn = IoULoss()
+    mse_loss_fn = nn.MSELoss()          # ← MSE as required by instructions
 
     def loss_fn(out, labels, boxes, masks):
-        boxes_norm = boxes.float()
-        return 0.5 * iou(out, boxes_norm) + 0.5 * l1(out, boxes_norm)
+        # out: pixel space [B, 4]
+        # boxes: normalized [0,1] from dataset → scale to pixel space
+        target_px = boxes.float() * 224.0
+        return mse_loss_fn(out, target_px) + iou_loss_fn(out, target_px)
 
     def metric_fn(m, loader):
         return evaluate_localization(m, loader)
 
     warmup_epochs = min(5, epochs // 4)
-    _train_loop(
-        model, train_loader, val_loader, loss_fn,
-        metric_fn, warmup_epochs, optimizer, scheduler,
-        checkpoint_path="localizer.pth", maximize_metric=True,
-    )
+    _train_loop(model, train_loader, val_loader, loss_fn,
+                metric_fn, warmup_epochs, optimizer, scheduler,
+                checkpoint_path="localizer.pth", maximize_metric=True)
 
-    # Phase 2: unfreeze encoder with lower LR
     for p in model.encoder.parameters():
         p.requires_grad = True
 
     optimizer = optim.AdamW([
-        {"params": model.encoder.parameters(),           "lr": lr * 0.1},
-        {"params": model.localization_head.parameters(), "lr": lr},
+        {"params": model.encoder.parameters(),            "lr": lr * 0.1},
+        {"params": model.localization_head.parameters(),  "lr": lr},
     ], weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode="max", patience=3)
 
-    return _train_loop(
-        model, train_loader, val_loader, loss_fn,
-        metric_fn, epochs - warmup_epochs, optimizer, scheduler,
-        checkpoint_path="localizer.pth", maximize_metric=True,
-    )
-
+    return _train_loop(model, train_loader, val_loader, loss_fn,
+                       metric_fn, epochs - warmup_epochs, optimizer, scheduler,
+                       checkpoint_path="localizer.pth", maximize_metric=True)
 
 def train_segmentation(model, train_loader, val_loader, epochs=10, lr=1e-4):
     optimizer = optim.AdamW(model.parameters(), lr=lr)

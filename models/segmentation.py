@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.layers import CustomDropout
-from models.vgg11 import VGG11Encoder, ConvBlock
+from models.vgg11 import VGG11, ConvBlock
 
 class VGG11UNet(nn.Module):
     """U-Net style segmentation network.

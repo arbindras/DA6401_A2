@@ -442,21 +442,19 @@ def evaluate_classification(model: nn.Module, dataloader: torch.utils.data.DataL
 
 #     return float(np.mean(ious)) if ious else 0.0
 def evaluate_localization(model, dataloader):
+    """Model outputs pixel-space cxcywh; target_boxes are normalized → scale up."""
     model.eval()
     ious = []
     dev = next(model.parameters()).device
+
     with torch.no_grad():
         for images, labels, target_boxes, masks in dataloader:
             images = images.to(dev)
-            H, W   = images.shape[2], images.shape[3]
-            preds  = predict_localization(model, images)   # pixel space
-            # normalize preds back for compute_iou which works in [0,1]
-            scale  = np.array([W, H, W, H], dtype=np.float32)
-            preds_norm  = preds / scale
-            target_norm = _to_numpy(target_boxes)          # already normalized
-            ious.append(compute_iou(preds_norm, target_norm))
-    return float(np.mean(ious)) if ious else 0.0
+            preds_np  = predict_localization(model, images)   # pixel space
+            target_np = _to_numpy(target_boxes) * 224.0       # normalize→pixel
+            ious.append(compute_iou(preds_np, target_np))
 
+    return float(np.mean(ious)) if ious else 0.0
 
 def evaluate_segmentation(model: nn.Module, dataloader: torch.utils.data.DataLoader) -> float:
     """Evaluate mean Dice score for segmentation."""

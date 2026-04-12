@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from models.layers import CustomDropout
-from models.vgg11 import VGG11Encoder
+from models.vgg11 import VGG11
 import torch.nn.functional as F
 
 class VGG11Classifier(nn.Module):
@@ -21,7 +21,7 @@ class VGG11Classifier(nn.Module):
         """
         super(VGG11Classifier, self).__init__()
 
-        self.encoder = VGG11Encoder(in_channels=in_channels)
+        self.encoder = VGG11(in_channels=in_channels)
 
         self.classifier_head = nn.Sequential(
             nn.AdaptiveAvgPool2d((1, 1)),  # Global average pooling

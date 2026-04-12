@@ -36,13 +36,13 @@ class ConvBlock(nn.Module):
     def forward(self, x):
         return self.block(x)
 
-class VGG11Encoder(nn.Module):
+class VGG11(nn.Module):
     """VGG11-style encoder with optional intermediate feature returns.
     """
 
     def __init__(self, in_channels: int = 3):
-        """Initialize the VGG11Encoder model."""
-        super(VGG11Encoder, self).__init__()
+        """Initialize the VGG11 model."""
+        super(VGG11, self).__init__()
 
         #Block 1
         self.enc1 = ConvBlock(in_channels, 64)
@@ -120,3 +120,5 @@ class VGG11Encoder(nn.Module):
             return x5_pooled, features
         else:    
              return x5_pooled
+        
+VGG11Encoder = VGG11

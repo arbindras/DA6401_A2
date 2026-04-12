@@ -9,13 +9,13 @@ from models.layers import CustomDropout
 from models.localization import VGG11Localizer
 from models.classification import VGG11Classifier
 from models.segmentation import VGG11UNet
-from models.vgg11 import VGG11Encoder
+from models.vgg11 import VGG11
 from models.multitask import MultiTaskPerceptionModel
 
 __all__ = [
     "CustomDropout",
     "VGG11Classifier",
-    "VGG11Encoder",
+    "VGG11",
     "VGG11Localizer",
     "VGG11UNet",
     "MultiTaskPerceptionModel",

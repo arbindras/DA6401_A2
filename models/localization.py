@@ -150,8 +150,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.layers import CustomDropout
-from models.vgg11 import VGG11Encoder
+from models.vgg11 import VGG11
 
+IMG_SIZE = 224 
 
 class VGG11Localizer(nn.Module):
     """VGG11-based localizer."""
@@ -159,7 +160,7 @@ class VGG11Localizer(nn.Module):
     def __init__(self, in_channels: int = 3, dropout_p: float = 0.5):
         super().__init__()
 
-        self.encoder = VGG11Encoder(in_channels=in_channels)
+        self.encoder = VGG11(in_channels=in_channels)
 
         self.localization_head = nn.Sequential(
             nn.Linear(512, 256),
@@ -188,16 +189,12 @@ class VGG11Localizer(nn.Module):
         print(f"✅ Loaded classifier encoder → localizer. Missing: {missing}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _, _, H, W = x.shape
         feat = self.encoder(x)
         feat = F.adaptive_avg_pool2d(feat, (1, 1)).flatten(1)
         out  = torch.sigmoid(self.localization_head(feat))  # [B, 4] normalized
 
         # Convert to pixel space — autograder expects image-space coordinates
-        out = torch.stack([
-            out[:, 0] * W,
-            out[:, 1] * H,
-            out[:, 2] * W,
-            out[:, 3] * H,
-        ], dim=1)
+        scale = torch.tensor([IMG_SIZE, IMG_SIZE, IMG_SIZE, IMG_SIZE],
+                              dtype=torch.float32, device=x.device)
+        out = out * scale
         return out  # [B, 4] pixel-space cxcywh
